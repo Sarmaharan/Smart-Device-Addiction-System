@@ -12,7 +12,7 @@ from smart_device_addiction_manager.gui.components import BlinkingIndicator
 from smart_device_addiction_manager.gui.limits_page import LimitsPage
 from smart_device_addiction_manager.gui.reports_page import ReportsPage
 from smart_device_addiction_manager.gui.settings_page import SettingsPage
-from smart_device_addiction_manager.gui.theme import HEADER_FONT, NORMAL_FONT, TITLE_FONT, PADDING
+from smart_device_addiction_manager.gui.theme import HEADER_FONT, NORMAL_FONT, TITLE_FONT, PADDING, THEME
 from smart_device_addiction_manager.gui.usage_page import UsagePage
 from smart_device_addiction_manager.services.alert_service import AlertService
 from smart_device_addiction_manager.services.prediction_service import PredictionService
@@ -27,9 +27,9 @@ class SmartDeviceAddictionApp(ctk.CTk):
         super().__init__()
         self.title("SMART DEVICE ADDICTION MANAGER")
         self.geometry("1200x760")
+        self.configure(fg_color=THEME.bg)
 
         ctk.set_appearance_mode("dark")
-        ctk.set_default_color_theme("blue")
 
         self.database = DatabaseManager()
         self.productivity_service = ProductivityService(self.database)
@@ -49,13 +49,26 @@ class SmartDeviceAddictionApp(ctk.CTk):
         self.refresh_dashboard()
 
     def _build_layout(self):
-        ctk.CTkLabel(self, text="SMART DEVICE ADDICTION MANAGER", font=TITLE_FONT).pack(anchor="w", padx=PADDING, pady=PADDING)
+        ctk.CTkLabel(self, text="SMART DEVICE ADDICTION MANAGER", font=TITLE_FONT, text_color=THEME.text).pack(
+            anchor="w", padx=PADDING, pady=PADDING
+        )
 
         self.indicator = BlinkingIndicator(self)
         self.indicator.pack(anchor="w", padx=PADDING)
         self.indicator.start()
 
-        container = ctk.CTkTabview(self)
+        container = ctk.CTkTabview(
+            self,
+            fg_color=THEME.panel,
+            segmented_button_fg_color=THEME.panel_2,
+            segmented_button_selected_color=THEME.accent,
+            segmented_button_selected_hover_color=THEME.accent_2,
+            segmented_button_unselected_color=THEME.panel_2,
+            segmented_button_unselected_hover_color=THEME.border,
+            text_color=THEME.text,
+            border_width=1,
+            border_color=THEME.border,
+        )
         container.pack(fill="both", expand=True, padx=PADDING, pady=PADDING)
 
         dashboard_tab = container.add("Dashboard")
@@ -63,6 +76,9 @@ class SmartDeviceAddictionApp(ctk.CTk):
         limits_tab = container.add("Limits")
         reports_tab = container.add("Reports")
         settings_tab = container.add("Settings")
+
+        for tab in (dashboard_tab, usage_tab, limits_tab, reports_tab, settings_tab):
+            tab.configure(fg_color=THEME.bg)
 
         self._build_dashboard_tab(dashboard_tab)
         self.usage_page = UsagePage(usage_tab, self.productivity_service)
@@ -75,25 +91,44 @@ class SmartDeviceAddictionApp(ctk.CTk):
         self.settings_page.pack(fill="both", expand=True)
 
     def _build_dashboard_tab(self, parent):
-        cards = ctk.CTkFrame(parent)
+        cards = ctk.CTkFrame(parent, fg_color=THEME.panel, border_color=THEME.border, border_width=1)
         cards.pack(fill="x", padx=PADDING, pady=PADDING)
 
-        self.total_time_label = ctk.CTkLabel(cards, text="Total Screen Time Today: 00:00:00", font=HEADER_FONT)
+        self.total_time_label = ctk.CTkLabel(
+            cards, text="Total Screen Time Today: 00:00:00", font=HEADER_FONT, text_color=THEME.text
+        )
         self.total_time_label.pack(anchor="w", padx=10, pady=6)
 
-        self.productivity_label = ctk.CTkLabel(cards, text="Productivity Score: 0%", font=NORMAL_FONT)
+        self.productivity_label = ctk.CTkLabel(cards, text="Productivity Score: 0%", font=NORMAL_FONT, text_color=THEME.text)
         self.productivity_label.pack(anchor="w", padx=10, pady=6)
 
-        self.risk_label = ctk.CTkLabel(cards, text="Addiction Risk Level: Low", font=NORMAL_FONT)
+        self.risk_label = ctk.CTkLabel(cards, text="Addiction Risk Level: Low", font=NORMAL_FONT, text_color=THEME.text)
         self.risk_label.pack(anchor="w", padx=10, pady=6)
 
-        self.prediction_label = ctk.CTkLabel(cards, text="Predicted Next Day Usage: N/A", font=NORMAL_FONT)
+        self.prediction_label = ctk.CTkLabel(
+            cards, text="Predicted Next Day Usage: N/A", font=NORMAL_FONT, text_color=THEME.text
+        )
         self.prediction_label.pack(anchor="w", padx=10, pady=6)
 
-        self.top_apps = ctk.CTkTextbox(parent, height=320, font=NORMAL_FONT)
+        self.top_apps = ctk.CTkTextbox(
+            parent,
+            height=320,
+            font=NORMAL_FONT,
+            fg_color=THEME.panel,
+            border_color=THEME.border,
+            border_width=1,
+            text_color=THEME.text,
+        )
         self.top_apps.pack(fill="both", expand=True, padx=PADDING, pady=PADDING)
 
-        ctk.CTkButton(parent, text="Refresh Dashboard", command=self.refresh_dashboard).pack(anchor="e", padx=PADDING)
+        ctk.CTkButton(
+            parent,
+            text="Refresh Dashboard",
+            command=self.refresh_dashboard,
+            fg_color=THEME.accent,
+            hover_color=THEME.accent_2,
+            text_color=THEME.text,
+        ).pack(anchor="e", padx=PADDING)
 
     def refresh_dashboard(self):
         summary = self.productivity_service.get_daily_summary(date.today())
@@ -101,9 +136,11 @@ class SmartDeviceAddictionApp(ctk.CTk):
         top_apps = self.productivity_service.get_top_apps(date.today())
         prediction = self.prediction_service.prediction_summary()
 
+        risk_color = THEME.good if risk["risk_level"] == "Low" else THEME.warn if risk["risk_level"] == "Moderate" else THEME.bad
+
         self.total_time_label.configure(text=f"Total Screen Time Today: {format_seconds(summary['total_screen_time'])}")
         self.productivity_label.configure(text=f"Productivity Score: {summary['productivity_score']:.2f}%")
-        self.risk_label.configure(text=f"Addiction Risk Level: {risk['risk_level']} ({risk['risk_score']:.2f})")
+        self.risk_label.configure(text=f"Addiction Risk Level: {risk['risk_level']} ({risk['risk_score']:.2f})", text_color=risk_color)
         self.prediction_label.configure(text=f"Predicted Next Day Usage: {prediction['value']}")
 
         lines = ["Top Used Applications:"]
